@@ -47,7 +47,9 @@ const { transportFactory, getMockTransport, resetMockTransports } = vi.hoisted((
   return {
     getMockTransport,
     resetMockTransports: () => transports.clear(),
-    transportFactory: vi.fn((ownerId: string | null) => getMockTransport(ownerId))
+    transportFactory: vi.fn((ownerId: string | null, sshId?: string | null) =>
+      getMockTransport(sshId ? `ssh:${sshId}` : ownerId)
+    )
   }
 })
 
@@ -129,7 +131,7 @@ describe('useNativeChatLiveSession — transport routing', () => {
   it('seeds from readSession alongside the subscription for the initial runtime load', async () => {
     await render({ paneKey: PANE, agent: AGENT, sessionId: SESSION, runtimeEnvironmentId: 'env-1' })
 
-    expect(transportFactory).toHaveBeenCalledWith('env-1')
+    expect(transportFactory).toHaveBeenCalledWith('env-1', null)
     const transport = getMockTransport('env-1')
     // The independent seed guards against a stuck 'loading' when the stream never
     // delivers a snapshot; a live snapshot still wins when it does (see below).
@@ -197,10 +199,29 @@ describe('useNativeChatLiveSession — transport routing', () => {
     expect(transport.subscribe).not.toHaveBeenCalled()
   })
 
+  it('rebinds an identical session id when its SSH owner changes', async () => {
+    const root = await render({
+      paneKey: PANE,
+      agent: AGENT,
+      sessionId: SESSION,
+      sshConnectionId: 'host-a'
+    })
+    expect(getMockTransport('ssh:host-a').subscribe).toHaveBeenCalledOnce()
+    await rerender(root, {
+      paneKey: PANE,
+      agent: AGENT,
+      sessionId: SESSION,
+      sshConnectionId: 'host-b'
+    })
+    expect(transportFactory).toHaveBeenCalledWith(null, 'host-b')
+    expect(getMockTransport('ssh:host-b').readSession).toHaveBeenCalledOnce()
+    expect(getMockTransport('ssh:host-b').subscribe).toHaveBeenCalledOnce()
+  })
+
   it('uses the local transport when the owner is null (unchanged behavior, R6)', async () => {
     await render({ paneKey: PANE, agent: AGENT, sessionId: SESSION })
 
-    expect(transportFactory).toHaveBeenCalledWith(null)
+    expect(transportFactory).toHaveBeenCalledWith(null, null)
     const transport = getMockTransport(null)
     expect(transport.readSession).toHaveBeenCalledOnce()
     expect(transport.subscribe).toHaveBeenCalledOnce()

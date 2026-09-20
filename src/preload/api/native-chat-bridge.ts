@@ -12,9 +12,16 @@ export const nativeChatApi = {
     agent: AgentType,
     sessionId: string,
     limit?: number,
-    transcriptPath?: string
+    transcriptPath?: string,
+    sshConnectionId?: string
   ): Promise<NativeChatReadSessionResult> =>
-    ipcRenderer.invoke('nativeChat:readSession', { agent, sessionId, limit, transcriptPath }),
+    ipcRenderer.invoke('nativeChat:readSession', {
+      agent,
+      sessionId,
+      limit,
+      transcriptPath,
+      sshConnectionId
+    }),
   /** Start live tailing; onAppended fires with only newly-appended messages. Returns an unsubscribe fn that closes the watcher. */
   subscribe: (
     args: {
@@ -22,6 +29,7 @@ export const nativeChatApi = {
       agent: AgentType
       sessionId: string
       transcriptPath?: string
+      sshConnectionId?: string
       limit?: number
     },
     onFrame: (frame: NativeChatSubscriptionFrame) => void

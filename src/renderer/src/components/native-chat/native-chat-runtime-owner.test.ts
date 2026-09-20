@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import {
   selectNativeChatRuntimeEnvironmentId,
+  selectNativeChatSshConnectionId,
   type NativeChatRuntimeOwnerState
 } from './native-chat-runtime-owner'
 
@@ -73,5 +74,39 @@ describe('selectNativeChatRuntimeEnvironmentId', () => {
         'tab-1'
       )
     ).toBe('env-1')
+  })
+})
+
+describe('SSH transcript ownership', () => {
+  it('routes an SSH worktree even before its path hydrates', () => {
+    expect(
+      selectNativeChatSshConnectionId(
+        state({ worktreesByRepo: worktreeRecord('ssh:conn-1') }),
+        'tab-1'
+      )
+    ).toBe('conn-1')
+  })
+  it('routes a folder workspace to its own SSH host', () => {
+    const value = state({
+      tabsByWorktree: { 'folder:folder-1': [terminalTab({ worktreeId: 'folder:folder-1' })] },
+      folderWorkspaces: [
+        {
+          id: 'folder-1',
+          projectGroupId: 'group-1',
+          executionHostId: 'ssh:conn-2',
+          connectionId: 'conn-2'
+        }
+      ]
+    })
+    expect(selectNativeChatSshConnectionId(value, 'tab-1')).toBe('conn-2')
+  })
+  it('does not assign SSH transport to local or peer-runtime worktrees', () => {
+    expect(selectNativeChatSshConnectionId(state(), 'tab-1')).toBeNull()
+    expect(
+      selectNativeChatSshConnectionId(
+        state({ worktreesByRepo: worktreeRecord('runtime:env') }),
+        'tab-1'
+      )
+    ).toBeNull()
   })
 })

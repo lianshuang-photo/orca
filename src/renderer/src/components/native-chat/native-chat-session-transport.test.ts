@@ -565,3 +565,29 @@ describe('runtime readSession error mapping', () => {
     expect(toRuntimeNativeChatErrorMessage(new Error('request timed out'))).toBe(generic)
   })
 })
+
+it('passes SSH ownership to both desktop reads and live subscriptions', async () => {
+  nativeChatReadSession.mockResolvedValue({ messages: [] })
+  const transport = getNativeChatSessionTransport(null, 'ssh-remote')
+  await transport.readSession('codex', 'session', 40, '/remote/session.jsonl')
+  expect(nativeChatReadSession).toHaveBeenCalledWith(
+    'codex',
+    'session',
+    40,
+    '/remote/session.jsonl',
+    'ssh-remote'
+  )
+  const onFrame = vi.fn()
+  const args = {
+    subscriptionId: 'sub',
+    agent: 'codex',
+    sessionId: 'session',
+    transcriptPath: '/remote/session.jsonl'
+  } as const
+  transport.subscribe(args, onFrame)
+  expect(nativeChatSubscribe).toHaveBeenCalledWith(
+    { ...args, sshConnectionId: 'ssh-remote' },
+    onFrame
+  )
+  expect(runtimeEnvironmentsCall).not.toHaveBeenCalled()
+})

@@ -266,10 +266,19 @@ function createRuntimeNativeChatTransport(environmentId: string): NativeChatSess
  *  only for a `runtime:`-owned pane on a non-web client (KTD-2); web and
  *  local/`ssh:`-owned panes keep the local adapter. */
 export function getNativeChatSessionTransport(
-  runtimeEnvironmentId: string | null
+  runtimeEnvironmentId: string | null,
+  sshConnectionId: string | null = null
 ): NativeChatSessionTransport {
   if (runtimeEnvironmentId && !isWebClientLocation()) {
     return createRuntimeNativeChatTransport(runtimeEnvironmentId)
+  }
+  if (sshConnectionId && !isWebClientLocation()) {
+    return {
+      readSession: (agent, sessionId, limit, transcriptPath) =>
+        window.api.nativeChat.readSession(agent, sessionId, limit, transcriptPath, sshConnectionId),
+      subscribe: (args, onFrame) =>
+        window.api.nativeChat.subscribe({ ...args, sshConnectionId }, onFrame)
+    }
   }
   return localNativeChatTransport
 }

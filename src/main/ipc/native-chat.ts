@@ -1,3 +1,7 @@
+import {
+  readSshNativeChatTranscript,
+  subscribeSshNativeChatTranscript
+} from '../native-chat/ssh-transcript-watch'
 import { ipcMain, type IpcMainEvent, type WebContents } from 'electron'
 import type {
   AgentType,
@@ -26,6 +30,7 @@ export type NativeChatReadSessionArgs = {
   /** Authoritative transcript path from the agent hook (providerSession), used to
    *  locate the file when the session id no longer names it (recent Claude Code). */
   transcriptPath?: string
+  sshConnectionId?: string
 }
 
 // Why: render and parse only the recent window so long transcripts do not stall
@@ -36,6 +41,9 @@ async function readSession(args: NativeChatReadSessionArgs): Promise<ReadTranscr
   const { agent, sessionId } = args
   // Clamp to a positive window; default to the desktop window for the first page.
   const limit = args.limit && args.limit > 0 ? Math.floor(args.limit) : DESKTOP_READ_WINDOW
+  if (args.sshConnectionId) {
+    return readSshNativeChatTranscript({ ...args, sshConnectionId: args.sshConnectionId, limit })
+  }
   return readNativeChatTranscriptTail({
     agent,
     sessionId,
@@ -52,6 +60,7 @@ export type NativeChatSubscribeArgs = {
   sessionId: string
   /** Authoritative transcript path from the agent hook (providerSession). */
   transcriptPath?: string
+  sshConnectionId?: string
   limit?: number
 }
 
@@ -245,7 +254,13 @@ async function handleSubscribe(event: IpcMainEvent, args: NativeChatSubscribeArg
   }
   let subscription: NativeChatTranscriptSubscription
   try {
-    subscription = await subscribeNativeChatTranscript(subscribeArgs, pending.controller.signal)
+    subscription = args.sshConnectionId
+      ? subscribeSshNativeChatTranscript(
+          args.sshConnectionId,
+          subscribeArgs,
+          pending.controller.signal
+        )
+      : await subscribeNativeChatTranscript(subscribeArgs, pending.controller.signal)
   } catch {
     takePendingSubscription(sender.id, subscriptionId, pending)
     return

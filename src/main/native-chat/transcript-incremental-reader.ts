@@ -1,3 +1,5 @@
+import { Readable } from 'node:stream'
+import type { TranscriptByteSource } from './transcript-byte-source'
 import type { NativeChatMessage, NativeChatTurnLifecycle } from '../../shared/native-chat-types'
 import { transcriptFallbackId } from './transcript-fallback-id'
 import {
@@ -41,19 +43,17 @@ export async function readIncrementalTranscriptMessages(
   onBatch?: (messages: NativeChatMessage[]) => void,
   decodeLifecycle?: (line: string, fallbackId: string) => NativeChatTurnLifecycle | null,
   onLifecycle?: (lifecycle: NativeChatTurnLifecycle) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  byteSource?: TranscriptByteSource
 ): Promise<NativeChatMessage[]> {
-  const end = (await wslGatedStat(filePath, 'exact', signal)).size
+  const end = byteSource?.size ?? (await wslGatedStat(filePath, 'exact', signal)).size
   if (end <= state.offset) {
     return []
   }
   const messages: NativeChatMessage[] = []
-  const stream = openTranscriptReadStream(
-    filePath,
-    { start: state.offset, end: end - 1 },
-    'exact',
-    signal
-  )
+  const stream = byteSource
+    ? Readable.from(readSourceChunks(byteSource, state.offset, end, signal))
+    : openTranscriptReadStream(filePath, { start: state.offset, end: end - 1 }, 'exact', signal)
   try {
     let absoluteOffset = state.offset
     for await (const rawChunk of stream) {
@@ -123,5 +123,23 @@ export async function readIncrementalTranscriptMessages(
     if (onBatch && messages.length >= APPEND_BATCH_MESSAGE_LIMIT) {
       onBatch(messages.splice(0))
     }
+  }
+}
+
+async function* readSourceChunks(
+  source: TranscriptByteSource,
+  start: number,
+  end: number,
+  signal?: AbortSignal
+) {
+  for (let offset = start; offset < end;) {
+    signal?.throwIfAborted()
+    const bytes = await source.read(offset, Math.min(64 * 1024, end - offset))
+    signal?.throwIfAborted()
+    if (!bytes.length) {
+      break
+    }
+    yield bytes
+    offset += bytes.length
   }
 }

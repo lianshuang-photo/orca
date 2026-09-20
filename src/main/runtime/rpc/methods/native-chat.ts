@@ -1,4 +1,9 @@
 import type { NativeChatMessage } from '../../../../shared/native-chat-types'
+import { resolveNativeChatTranscriptOwner } from '../../../native-chat/transcript-owner'
+import {
+  readSshNativeChatTranscript,
+  subscribeSshNativeChatTranscript
+} from '../../../native-chat/ssh-transcript-watch'
 import {
   readNativeChatTranscriptTail,
   subscribeNativeChatTranscript,
@@ -69,16 +74,20 @@ export const NATIVE_CHAT_METHODS = [
     params: NativeChatSession,
     handler: async (params, { clientKind, signal }) => {
       const limit = params.limit ?? MOBILE_NATIVE_CHAT_DEFAULT_WINDOW
-      const result = await readNativeChatTranscriptTail(
-        {
-          agent: params.agent,
-          sessionId: params.sessionId,
-          transcriptPath: params.transcriptPath,
-          limit,
-          beforeOffset: params.beforeOffset
-        },
-        signal
-      )
+      const owner = resolveNativeChatTranscriptOwner(params)
+      const args = {
+        agent: params.agent,
+        sessionId: params.sessionId,
+        transcriptPath: owner.transcriptPath,
+        limit,
+        beforeOffset: params.beforeOffset
+      }
+      const result = owner.sshConnectionId
+        ? await readSshNativeChatTranscript(
+            { ...args, sshConnectionId: owner.sshConnectionId },
+            signal
+          )
+        : await readNativeChatTranscriptTail(args, signal)
       return 'messages' in result
         ? {
             messages: windowForClient(result.messages, clientKind, limit),
@@ -96,6 +105,7 @@ export const NATIVE_CHAT_METHODS = [
       if (signal?.aborted) {
         return
       }
+      const owner = resolveNativeChatTranscriptOwner(params)
       let closed = false
       let unsubscribe = (): void => {}
       const setupController = new AbortController()
@@ -134,7 +144,7 @@ export const NATIVE_CHAT_METHODS = [
       const subscribeArgs: SubscribeNativeChatTranscriptArgs = {
         agent: params.agent,
         sessionId: params.sessionId,
-        transcriptPath: params.transcriptPath,
+        transcriptPath: owner.transcriptPath,
         initialLimit: limit,
         onInitialSnapshot: (messages, hasMore, beforeOffset, error, lifecycle) => {
           if (closed) {
@@ -185,7 +195,13 @@ export const NATIVE_CHAT_METHODS = [
       }
       let subscription: NativeChatTranscriptSubscription
       try {
-        subscription = await subscribeNativeChatTranscript(subscribeArgs, setupController.signal)
+        subscription = owner.sshConnectionId
+          ? subscribeSshNativeChatTranscript(
+              owner.sshConnectionId,
+              subscribeArgs,
+              setupController.signal
+            )
+          : await subscribeNativeChatTranscript(subscribeArgs, setupController.signal)
       } catch (error) {
         if (closed || setupController.signal.aborted) {
           return

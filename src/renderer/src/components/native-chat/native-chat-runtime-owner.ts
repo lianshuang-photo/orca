@@ -1,5 +1,7 @@
+import { parseExecutionHostId } from '../../../../shared/execution-host'
 import {
   getRuntimeEnvironmentIdForWorktree,
+  getExecutionHostIdForWorktree,
   type WorktreeRuntimeOwnerState
 } from '@/lib/worktree-runtime-owner'
 import type { AppState } from '@/store/types'
@@ -27,4 +29,13 @@ export function selectNativeChatRuntimeEnvironmentId(
 ): string | null {
   const worktreeId = findTerminalTabWorktreeId(state.tabsByWorktree, terminalTabId)
   return worktreeId ? getRuntimeEnvironmentIdForWorktree(state, worktreeId) : null
+}
+
+export function selectNativeChatSshConnectionId(
+  state: NativeChatRuntimeOwnerState,
+  terminalTabId: string
+): string | null {
+  const worktreeId = findTerminalTabWorktreeId(state.tabsByWorktree, terminalTabId)
+  const host = parseExecutionHostId(getExecutionHostIdForWorktree(state, worktreeId))
+  return host?.kind === 'ssh' ? host.targetId : null
 }

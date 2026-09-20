@@ -34,6 +34,7 @@ export type UseNativeChatLiveSessionArgs = {
   transcriptPath?: string | null
   /** Runtime owner (Model B): non-null routes read/subscribe to the remote host; null keeps the local IPC path. */
   runtimeEnvironmentId?: string | null
+  sshConnectionId?: string | null
   /** False suspends transcript IO while retaining the last committed session. */
   enabled?: boolean
 }
@@ -102,10 +103,11 @@ export function useNativeChatLiveSession(
   args: UseNativeChatLiveSessionArgs
 ): NativeChatLiveSession {
   const { paneKey, agent, sessionId, transcriptPath, runtimeEnvironmentId, enabled = true } = args
+  const sshConnectionId = args.sshConnectionId
   // Stable per owner id so a re-render without an owner flip keeps the same transport and doesn't re-subscribe.
   const transport = useMemo(
-    () => getNativeChatSessionTransport(runtimeEnvironmentId ?? null),
-    [runtimeEnvironmentId]
+    () => getNativeChatSessionTransport(runtimeEnvironmentId ?? null, sshConnectionId ?? null),
+    [runtimeEnvironmentId, sshConnectionId]
   )
   const [read, setRead] = useState<ReadState>({ phase: 'loading' })
   const [hasMore, setHasMore] = useState(false)
@@ -136,6 +138,7 @@ export function useNativeChatLiveSession(
   const sourceKey = JSON.stringify([
     paneKey,
     runtimeEnvironmentId ?? null,
+    sshConnectionId ?? null,
     agent,
     sessionId,
     transcriptPath ?? null

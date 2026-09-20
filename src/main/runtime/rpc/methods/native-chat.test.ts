@@ -4,6 +4,9 @@ import type {
   NativeChatSubagentEntry
 } from '../../../../shared/native-chat-types'
 import type { RpcContext } from '../core'
+vi.mock('../../../agent-hooks/server', () => ({
+  agentHookServer: { getStatusSnapshot: () => [] }
+}))
 
 // Stub the bounded tail reader so the handler returns a deterministic transcript with
 // one oversized tool-result block; the test then asserts clip behavior per client.

@@ -17,6 +17,7 @@ export function useNativeChatRetainedSession(
   const identity = encodeNativeChatTranscriptIdentity([
     args.paneKey,
     args.runtimeEnvironmentId ?? null,
+    args.sshConnectionId ?? null,
     args.agent,
     args.sessionId,
     args.transcriptPath ?? null
