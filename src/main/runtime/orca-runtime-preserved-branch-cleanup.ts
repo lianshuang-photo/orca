@@ -79,6 +79,11 @@ export class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeWithTermin
     | ((paneKey: string) => AgentStatusIpcPayload[])
     | null
 
+  /** Every provider-session row this host holds, resume-identity-only rows included. */
+  getAgentProviderSessionRows(): AgentStatusIpcPayload[] {
+    return this.getAgentProviderSessionSnapshotFn?.() ?? []
+  }
+
   protected readonly attestAgentHookCompatibilityAuthorityFn:
     | ((candidate: {
         paneKey: string
