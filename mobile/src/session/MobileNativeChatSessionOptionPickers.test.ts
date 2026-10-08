@@ -169,6 +169,13 @@ describe('MobileNativeChatSessionOptionPickers', () => {
     expect(renderer!.toJSON()).toBeNull()
   })
 
+  it('opens the picker before the host has reported the current model', async () => {
+    mount([{ ...MODEL_DESCRIPTOR, valueSource: 'unknown', kind: { type: 'select', choices: [] } }])
+    expect(pill('Model').props.disabled).toBe(false)
+    await act(async () => pill('Model').props.onPress())
+    expect(renderer!.root.findByType('BottomDrawer').props.visible).toBe(true)
+  })
+
   it('shows the current model and effort in one pill', () => {
     mount([MODEL_DESCRIPTOR, EFFORT_DESCRIPTOR])
     expect(pill('Model').props).toMatchObject({

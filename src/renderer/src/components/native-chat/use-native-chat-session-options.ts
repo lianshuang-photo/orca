@@ -212,9 +212,9 @@ export function useNativeChatSessionOptions(args: {
     const models =
       (discoveryContext ? readNativeChatEnrichedModels(agent, discoveryContext.hostKey) : null) ??
       catalog.models
-    // OMP reports exact selectors, including models absent from cached discovery.
+    // Codex and OMP report exact selectors that may be newer than the bundled catalog.
     const matched =
-      agent === 'omp'
+      agent === 'omp' || agent === 'codex'
         ? reportedModel.trim()
         : matchNativeChatCatalogModelId({ ...catalog, models }, reportedModel)
     if (!matched || appliedReportedModelRef.current === matched) {

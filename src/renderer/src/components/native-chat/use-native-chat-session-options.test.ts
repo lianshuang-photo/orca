@@ -63,6 +63,24 @@ describe('useNativeChatSessionOptions model reporting', () => {
     Object.defineProperty(window, 'api', { configurable: true, value: undefined })
   })
 
+  it('names a Codex model even when its catalog predates the host report', async () => {
+    storeState.agentStatusByPaneKey['tab-codex-model:leaf'] = { model: 'gpt-6-astra' }
+    const { result } = renderHook(() =>
+      useNativeChatSessionOptions({
+        agent: 'codex',
+        terminalTabId: 'tab-codex-model',
+        targetPtyId: 'pty-codex-model',
+        dispatchCommand: vi.fn(),
+        readTerminalScreen: () => null,
+        paneKey: 'tab-codex-model:leaf'
+      })
+    )
+    await waitFor(() =>
+      expect(modelDescriptor(result.current.snapshot).currentValue).toBe('gpt-6-astra')
+    )
+    expect(result.current.snapshot[0]).toMatchObject({ valueSource: 'reported' })
+  })
+
   it('names an OMP session by the model its hook reports, before and after discovery', async () => {
     // Why: OMP seeds no models and has no terminal frame to read; the hook's
     // `provider/id` stamp is the only way the pill can name the running model.

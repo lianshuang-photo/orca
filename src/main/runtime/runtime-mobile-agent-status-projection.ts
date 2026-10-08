@@ -10,6 +10,24 @@ import { terminalTitleBlocksExplicitAgentStatus } from './runtime-worktree-statu
 import type { HookLiveAgentRow } from './runtime-terminal-contracts'
 import type { RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
 
+export function projectRuntimeMobileShellTitleStatus(
+  status: AgentStatusEntry,
+  pty: RuntimePtyWorktreeRecord | null
+): AgentStatusEntry {
+  return {
+    state: 'done',
+    prompt: '',
+    updatedAt: pty?.lastOscTitleEpochMs ?? status.updatedAt,
+    stateStartedAt: pty?.lastAgentStatusStartedAtEpochMs ?? status.stateStartedAt,
+    paneKey: status.paneKey,
+    stateHistory: [],
+    agentType: status.agentType,
+    ...(status.model !== undefined ? { model: status.model } : {}),
+    ...(status.modelSwitchCommand ? { modelSwitchCommand: status.modelSwitchCommand } : {}),
+    ...(status.providerSession ? { providerSession: status.providerSession } : {})
+  }
+}
+
 export function renewRuntimeMobileAgentStatusFromPtyTitle(
   status: AgentStatusEntry | null,
   pty: RuntimePtyWorktreeRecord | null,
@@ -53,6 +71,8 @@ export function renewRuntimeMobileAgentStatusFromPtyTitle(
     paneKey: status.paneKey,
     stateHistory: [],
     ...(status.agentType ? { agentType: status.agentType } : {}),
+    ...(status.model !== undefined ? { model: status.model } : {}),
+    ...(status.modelSwitchCommand ? { modelSwitchCommand: status.modelSwitchCommand } : {}),
     ...(status.terminalHandle ? { terminalHandle: status.terminalHandle } : {}),
     ...(status.worktreeId ? { worktreeId: status.worktreeId } : {}),
     ...(status.tabId ? { tabId: status.tabId } : {}),
@@ -108,6 +128,8 @@ export type RuntimeHookAgentRowLookup = {
   providerSession: AgentProviderSessionMetadata | null
   providerSessionAgentType: string | null
   providerSessionReceivedAt: number | null
+  providerSessionModel?: string
+  providerSessionModelSwitchCommand?: AgentStatusEntry['modelSwitchCommand']
   agentType: string | null
   agentIsLive: boolean
   live: HookLiveAgentRow | null
@@ -148,6 +170,10 @@ export function selectRuntimeHookAgentRowForPane(
     providerSession: session?.providerSession ?? null,
     providerSessionAgentType: session?.agentType ?? null,
     providerSessionReceivedAt: session?.receivedAt ?? null,
+    ...(session?.model !== undefined ? { providerSessionModel: session.model } : {}),
+    ...(session?.modelSwitchCommand
+      ? { providerSessionModelSwitchCommand: session.modelSwitchCommand }
+      : {}),
     agentType: agent?.agentType ?? null,
     agentIsLive: agent != null && agent.state !== 'done',
     live: live

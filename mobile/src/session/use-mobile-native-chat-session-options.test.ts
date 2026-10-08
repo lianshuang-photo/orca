@@ -157,6 +157,17 @@ describe('useMobileNativeChatSessionOptions', () => {
     expect(onAgentPicker).toHaveBeenCalledOnce()
   })
 
+  it('shows a Codex model reported by the host even when the catalog predates it', () => {
+    mount({ agent: 'codex', reportedModel: 'gpt-6-astra' })
+    expect(api!.snapshot[0]).toMatchObject({
+      valueSource: 'reported',
+      kind: { currentValue: 'gpt-6-astra' },
+      action: { type: 'agent-picker' }
+    })
+    update({ reportedModel: 'custom-codex-model' })
+    expect(api!.snapshot[0]?.kind).toMatchObject({ currentValue: 'custom-codex-model' })
+  })
+
   it('types the Codex effort picker command', async () => {
     mount({ agent: 'codex', reportedModel: 'gpt-5.5' })
     await act(async () => {

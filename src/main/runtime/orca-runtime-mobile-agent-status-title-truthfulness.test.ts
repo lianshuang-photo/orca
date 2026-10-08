@@ -102,6 +102,8 @@ function publishRendererWorkingPane(runtime: OrcaRuntimeService, paneTitle: stri
               updatedAt: T0,
               stateStartedAt: T0,
               agentType: 'claude',
+              model: 'claude-sonnet-5',
+              providerSession: PROVIDER_SESSION,
               paneKey: PANE_KEY,
               stateHistory: []
             },
@@ -201,8 +203,22 @@ describe('mobile session tabs: live-title evidence vs published agent status', (
       const agentStatus = await projectAgentStatus(runtime)
       expect(agentStatus).toEqual(expect.objectContaining({ state: 'done', prompt: '' }))
       expect(agentStatus).toHaveProperty('agentType', 'claude')
+      expect(agentStatus).toHaveProperty('model', 'claude-sonnet-5')
     }
   )
+
+  it('keeps the reported model when a newer idle title retires working', async () => {
+    const runtime = await createRuntime()
+    publishRendererWorkingPane(runtime, 'Terminal')
+    runtime.onPtyData(PTY_ID, '\x1b]0;✳ Claude Code\x07', Date.now())
+
+    expect(await projectAgentStatus(runtime)).toMatchObject({
+      state: 'done',
+      prompt: '',
+      model: 'claude-sonnet-5',
+      providerSession: PROVIDER_SESSION
+    })
+  })
 
   it('clears a stale working under a Claude management title', async () => {
     const runtime = await createRuntime()
@@ -236,6 +252,7 @@ describe('mobile session tabs: identity-only fallback freshness', () => {
       tabId: TAB_ID,
       worktreeId: WORKTREE_ID,
       providerSession: PROVIDER_SESSION,
+      model: 'claude-sonnet-5',
       providerSessionOnly: true
     }
     const runtime = await createRuntime([resumeRow])
@@ -251,6 +268,7 @@ describe('mobile session tabs: identity-only fallback freshness', () => {
     expect(agentStatus).toEqual(
       expect.objectContaining({
         state: 'done',
+        model: 'claude-sonnet-5',
         updatedAt: titleObservedAt,
         stateStartedAt: titleObservedAt
       })

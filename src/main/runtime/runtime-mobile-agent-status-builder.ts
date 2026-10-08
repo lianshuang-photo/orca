@@ -1,6 +1,7 @@
 import {
   normalizeCompatibleAgentStatusEntryForOwner,
-  normalizeCompatibleAgentTitleForOwner
+  normalizeCompatibleAgentTitleForOwner,
+  resolveCompatibleAgentTypeForOwner
 } from '../../shared/agent-title-owner'
 import { resolvePaneAgentOwnerRecord } from '../../shared/pane-agent-owner'
 import type { AgentStatusEntry, AgentStatusIpcPayload } from '../../shared/agent-status-types'
@@ -135,6 +136,8 @@ export function buildRuntimeMobileAgentStatus(
   // every output byte, so a paired client's live status could never outrank it.
   const evidenceAt = pty?.lastOscTitleEpochMs ?? hookRow.providerSessionReceivedAt ?? Date.now()
   const agentType = ownerAgent ?? undefined
+  const sessionModelMatchesOwner =
+    resolveCompatibleAgentTypeForOwner(hookRow.providerSessionAgentType, ownerAgent) === agentType
   return {
     agentStatus: {
       state:
@@ -149,6 +152,12 @@ export function buildRuntimeMobileAgentStatus(
       paneKey,
       ...(terminalHandle ? { terminalHandle } : {}),
       ...(agentType ? { agentType } : {}),
+      ...(sessionModelMatchesOwner && hookRow.providerSessionModel !== undefined
+        ? { model: hookRow.providerSessionModel }
+        : {}),
+      ...(sessionModelMatchesOwner && hookRow.providerSessionModelSwitchCommand
+        ? { modelSwitchCommand: hookRow.providerSessionModelSwitchCommand }
+        : {}),
       ...(pty?.worktreeId ? { worktreeId: pty.worktreeId } : {}),
       tabId: tab.parentTabId,
       terminalTitle,
